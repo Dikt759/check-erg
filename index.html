@@ -79,7 +79,38 @@ details .inhalt p{margin-bottom:.4rem}
 .cta.ghost{background:var(--flaeche);color:var(--fg);margin-top:.6rem}
 button:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
 .disclaimer{font-size:.72rem;color:var(--grau2);text-align:center;padding:.8rem 1.5rem 0;line-height:1.5}
-@media print{.cta-bereich,.zurueck,.seitenleiste{display:none}.screen{position:static;opacity:1;transform:none}}
+/* ============ PDF-Export / Druckbericht ============ */
+#druckbericht{display:none}
+@media print{
+  body{display:block;background:#fff;font-family:'Spectral',Georgia,serif;color:#1C2B26}
+  .app{display:none}
+  #druckbericht{display:block;max-width:180mm;margin:0 auto;font-size:11pt;line-height:1.55}
+  .db-kopf{border-bottom:2.5pt solid #1C2B26;padding-bottom:6mm;margin-bottom:8mm}
+  .db-eyebrow{font-family:'Inter',sans-serif;font-size:7.5pt;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#8C6A2F;margin-bottom:2mm}
+  .db-kopf h1{font-family:'Spectral',serif;font-size:19pt;font-weight:700;letter-spacing:0;line-height:1.2;margin-bottom:2mm;color:#1C2B26}
+  .db-meta{font-family:'Inter',sans-serif;font-size:8pt;color:#6B756E;display:flex;gap:8mm}
+  .db-abschnitt{margin-bottom:7mm;break-inside:avoid}
+  .db-abschnitt>h2{font-family:'Inter',sans-serif;font-size:8pt;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#8C6A2F;border-bottom:.5pt solid #DDE1DA;padding-bottom:1.5mm;margin-bottom:3.5mm}
+  .db-frage{margin-bottom:4.5mm;break-inside:avoid;padding-left:4mm;border-left:1.5pt solid #DDE1DA}
+  .db-frage .df-tag{font-family:'Inter',sans-serif;font-size:7pt;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8B948D}
+  .db-frage .df-q{font-weight:600;font-size:11pt;color:#1C2B26;margin:.5mm 0 1mm}
+  .db-frage .df-a{font-size:10.5pt}
+  .db-frage .df-a b{font-weight:600}
+  .db-frage .df-a .pfeilzeichen{color:#8C6A2F;font-weight:700;margin-right:1.5mm}
+  .db-frage .df-detail{font-family:'Inter',sans-serif;font-size:8.5pt;color:#5A645D;margin-top:.5mm}
+  .db-frage .df-quelle{font-family:'Inter',sans-serif;font-size:7.5pt;color:#8B948D;margin-top:1mm}
+  .db-ergebnis{border:1pt solid #1C2B26;border-radius:2mm;padding:5mm 6mm;break-inside:avoid;margin-bottom:7mm}
+  .db-ergebnis .de-status{font-family:'Inter',sans-serif;font-size:8pt;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-bottom:1.5mm}
+  .de-status.gruen{color:#0B7A57}.de-status.gelb{color:#9A6D0B}.de-status.rotf{color:#B02A2F}.de-status.neutral{color:#6B756E}
+  .db-ergebnis h3{font-family:'Spectral',serif;font-size:14pt;font-weight:700;margin-bottom:2mm;color:#1C2B26}
+  .db-ergebnis p{font-size:10.5pt}
+  .db-ergebnis .de-risiko{font-family:'Inter',sans-serif;font-size:9pt;margin-top:2.5mm;color:#33463F}
+  .db-folge{margin-bottom:2.8mm;break-inside:avoid;font-size:10pt}
+  .db-folge b{font-weight:600}
+  .db-folge span{font-family:'Inter',sans-serif;font-size:9pt;color:#4B554F}
+  .db-quellen p{font-size:9pt;color:#33463F;margin-bottom:1.2mm;padding-left:4mm;text-indent:-4mm}
+  .db-fusz{border-top:.5pt solid #DDE1DA;margin-top:8mm;padding-top:3mm;font-family:'Inter',sans-serif;font-size:7.5pt;color:#8B948D}
+}
 
 /* ============ DESKTOP: seriöse Kanzlei-Ansicht ============ */
 @media (min-width:900px){
@@ -162,6 +193,8 @@ button:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
 
   <p class="disclaimer">Strukturierte Erstprüfung · Keine Rechtsberatung · Rechtslage Juli 2026</p>
 </div>
+
+<div id="druckbericht" aria-hidden="true"></div>
 
 <script>
 /* ---------- Fragenkatalog ---------- */
@@ -398,7 +431,10 @@ FRAGEN.forEach(f=>{
   screens[f.id] = s;
 });
 
+let letztesErgebnis = null;
+
 function baueErgebnis(erg){
+  letztesErgebnis = erg;
   const alt = document.getElementById("screen-ergebnis"); if(alt) alt.remove();
   const folgenListe = erg.folgen==="sicherheit" ? FOLGEN_SICHERHEIT : erg.folgen==="allgemein" ? FOLGEN_ALLGEMEIN : null;
   const s = document.createElement("div");
@@ -421,7 +457,7 @@ function baueErgebnis(erg){
       </details>
     </div>
     <div class="cta-bereich">
-      <button class="cta" onclick="window.print()">Ergebnis drucken / PDF</button>
+      <button class="cta" onclick="druckExport()">Ergebnis drucken / PDF</button>
       <button class="cta ghost" id="btn-neu">Neue Prüfung</button>
     </div>`;
   wrap.appendChild(s);
@@ -475,7 +511,75 @@ function updateTop(){
   document.getElementById("btn-zurueck").disabled = pfad.length<=1;
 }
 
+/* ---------- PDF-Export: vollständiger Prüfbericht ---------- */
+function baueDruckbericht(){
+  const db = document.getElementById("druckbericht");
+  const erg = letztesErgebnis;
+  const datum = new Date().toLocaleDateString("de-AT",{day:"2-digit",month:"long",year:"numeric"});
+  const uhrzeit = new Date().toLocaleTimeString("de-AT",{hour:"2-digit",minute:"2-digit"});
+
+  // Beantwortete Fragen in Pfadreihenfolge
+  const frageBloecke = pfad.filter(id=>id!=="E").map(id=>{
+    const f = FRAGEN.find(x=>x.id===id);
+    const wert = antworten[id];
+    if(!f || !wert) return "";
+    const opt = f.optionen.find(o=>o.w===wert);
+    return `<div class="db-frage">
+      <div class="df-tag">${f.tag}</div>
+      <div class="df-q">${f.titel}</div>
+      <div class="df-a"><span class="pfeilzeichen">→</span><b>${opt.label}</b></div>
+      ${opt.small?`<div class="df-detail">${opt.small}</div>`:""}
+      <div class="df-quelle">Rechtsquellen: ${f.quelle}</div>
+    </div>`;
+  }).join("");
+
+  const statusText = erg ? {gruen:"Ergebnis: Zulässig", gelb:"Ergebnis: Erhöhtes Risiko / Prüfungsbedarf", rotf:"Ergebnis: Verstoß", neutral:"Ergebnis: Nicht anwendbar"}[erg.typ] : "";
+  const folgenListe = erg && erg.folgen==="sicherheit" ? FOLGEN_SICHERHEIT : erg && erg.folgen==="allgemein" ? FOLGEN_ALLGEMEIN : null;
+
+  db.innerHTML = `
+    <div class="db-kopf">
+      <div class="db-eyebrow">Gesellschaftsrecht Österreich · Prüfbericht</div>
+      <h1>Prüfung der verbotenen Einlagenrückgewähr</h1>
+      <div class="db-meta"><span>Erstellt am ${datum}, ${uhrzeit} Uhr</span><span>§ 82 f GmbHG · §§ 52, 56 AktG</span><span>Schema inkl. Sicherheiten-Modul für Immobiliengesellschaften</span></div>
+    </div>
+
+    <div class="db-abschnitt">
+      <h2>I. Prüfungsverlauf — Fragen und Antworten</h2>
+      ${frageBloecke}
+    </div>
+
+    <div class="db-abschnitt">
+      <h2>II. Ergebnis</h2>
+      ${erg ? `<div class="db-ergebnis">
+        <div class="de-status ${erg.typ}">${statusText} — Rechtsrisiko: ${erg.risiko}</div>
+        <h3>${erg.titel}</h3>
+        <p>${erg.text}</p>
+      </div>` : `<div class="db-ergebnis"><h3>Prüfung noch nicht abgeschlossen</h3><p>Der Bericht dokumentiert den bisherigen Zwischenstand der Angaben.</p></div>`}
+    </div>
+
+    ${folgenListe ? `
+    <div class="db-abschnitt">
+      <h2>III. Rechtsfolgen${erg.folgen==="sicherheit"?" bei nichtiger Sicherheitenbestellung":""}</h2>
+      ${folgenListe.map(x=>`<div class="db-folge"><b>${x.b}:</b> <span>${x.s}</span></div>`).join("")}
+    </div>`:""}
+
+    <div class="db-abschnitt db-quellen">
+      <h2>${folgenListe?"IV.":"III."} Rechtsquellenverzeichnis</h2>
+      ${QUELLEN_ALLE.map(q=>`<p>${q}</p>`).join("")}
+    </div>
+
+    <div class="db-fusz">Dieser Bericht dokumentiert eine strukturierte Erstprüfung anhand der Angaben des Anwenders. Er ersetzt keine Rechtsberatung; die abschließende Beurteilung ist stets einzelfallabhängig und rechtsanwaltlich zu verifizieren. Alle zitierten Quellen sind im Rechtsinformationssystem des Bundes (ris.bka.gv.at) kostenfrei abrufbar. Rechtslage: Juli 2026.</div>`;
+}
+
+function druckExport(){
+  baueDruckbericht();
+  window.print();
+}
+window.addEventListener("beforeprint", baueDruckbericht);
+
 function reset(){
+  letztesErgebnis = null;
+  document.getElementById("druckbericht").innerHTML = "";
   Object.keys(antworten).forEach(k=>delete antworten[k]);
   Object.values(screens).forEach(s=>s.querySelectorAll(".opt").forEach(o=>o.classList.remove("gewaehlt")));
   const e = document.getElementById("screen-ergebnis"); if(e) e.remove();
