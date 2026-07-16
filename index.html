@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Prüfung der Einlagenrückgewähr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Spectral:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1C2B26; --ink2:#33463F; --papier:#F6F7F4; --karte:#FFFFFF;
+  --linie:#DDE1DA; --gold:#8C6A2F; --grau1:#4B554F; --grau2:#8B948D;
+  --ok:#00B37E; --warn:#E8A317; --rot:#E5484D; --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--papier);color:var(--ink);font-family:'Spectral',Georgia,serif;font-size:16px;line-height:1.55;display:flex;justify-content:center}
+.app{width:100%;max-width:480px;min-height:100dvh;display:flex;flex-direction:column;position:relative}
+.seitenleiste{display:none}
+
+/* Topbar */
+.topbar{display:flex;align-items:center;gap:.8rem;padding:0.8rem 1.25rem .5rem;position:sticky;top:0;background:var(--papier);z-index:5}
+.zurueck{width:36px;height:36px;border-radius:6px;border:1px solid var(--linie);background:var(--karte);font-size:1rem;cursor:pointer;color:var(--ink);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Inter',sans-serif}
+.zurueck:disabled{opacity:.35;cursor:default}
+.progress{flex:1;height:3px;background:#E3E7E1;border-radius:2px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--ink);border-radius:2px;transition:width .4s cubic-bezier(.4,0,.2,1)}
+.schritt-nr{font-family:'Inter',sans-serif;font-size:.72rem;font-weight:600;color:var(--grau2);min-width:2.6rem;text-align:right}
+
+/* Screens */
+.screens{flex:1;position:relative;overflow:hidden}
+.screen{position:absolute;inset:0;padding:0.6rem 1.25rem 1rem;display:flex;flex-direction:column;overflow-y:auto;opacity:0;transform:translateX(28px);pointer-events:none;transition:opacity .3s,transform .3s}
+.screen.aktiv{opacity:1;transform:none;pointer-events:auto}
+.screen.raus{transform:translateX(-28px)}
+@media (prefers-reduced-motion:reduce){.screen{transition:none;transform:none}}
+
+.tag{display:inline-flex;align-self:flex-start;font-family:'Inter',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin-bottom:.5rem}
+h1{font-family:'Spectral',serif;font-size:1.35rem;font-weight:700;line-height:1.2;margin-bottom:.3rem;color:var(--ink)}
+.sub{color:var(--grau1);font-size:.85rem;line-height:1.4;margin-bottom:.8rem}
+
+/* Kompakte Optionen */
+.optionen{display:flex;flex-direction:column;gap:.4rem}
+.opt{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;background:var(--karte);border:1px solid var(--linie);border-radius:var(--radius);padding:.55rem .8rem;cursor:pointer;font-family:'Spectral',serif;font-size:.95rem;font-weight:600;color:var(--ink);transition:border-color .15s,background .15s,transform .1s}
+.opt:active{transform:scale(.99)}
+.opt:hover{border-color:var(--ink2)}
+.opt.gewaehlt{border-color:var(--ink);background:#EDF1EC;box-shadow:inset 3px 0 0 var(--ink)}
+.opt .icon{width:32px;height:32px;border-radius:8px;background:#EDF1EC;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.opt.gewaehlt .icon{background:var(--ink)}
+.opt small{display:block;font-family:'Inter',sans-serif;font-weight:400;color:#6B756E;font-size:.72rem;margin-top:.1rem;line-height:1.3}
+.opt .pfeil{margin-left:auto;color:var(--grau2);flex-shrink:0;font-family:'Inter',sans-serif}
+
+.info-row{margin-top:auto;padding-top:.8rem}
+details{border-top:1px solid var(--linie)}
+details summary{list-style:none;display:flex;align-items:center;justify-content:space-between;padding:.7rem 0;cursor:pointer;font-family:'Inter',sans-serif;font-size:.8rem;font-weight:600;color:#5A645D}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:"⌄";transition:transform .2s;color:var(--grau2)}
+details[open] summary::after{transform:rotate(180deg)}
+details .inhalt{padding:0 0 1rem;font-family:'Inter',sans-serif;font-size:.75rem;color:var(--grau1);line-height:1.5}
+details .inhalt p{margin-bottom:.4rem}
+
+/* Ergebnis Design Neu */
+.erg-header{border-radius:12px;padding:1.3rem;margin-bottom:1rem;color:#fff;display:flex;flex-direction:column;align-items:flex-start;gap:.4rem}
+.erg-header.gruen{background:var(--ok)}.erg-header.gelb{background:var(--warn)}.erg-header.rotf{background:var(--rot)}.erg-header.neutral{background:var(--grau2)}
+.erg-header h1{color:#fff;margin:0;font-size:1.35rem;line-height:1.2}
+.erg-header .badge{background:rgba(255,255,255,0.25);padding:0.25rem 0.6rem;border-radius:20px;font-size:0.75rem;font-family:'Inter',sans-serif;font-weight:700;display:inline-block}
+
+.erg-text{background:var(--karte);border:1px solid var(--linie);padding:1rem;border-radius:10px;font-size:.9rem;color:var(--ink);line-height:1.5;margin-bottom:1rem}
+
+.liste .zeile{display:flex;gap:.7rem;padding:.75rem 0;border-bottom:1px solid var(--linie);font-size:.85rem}
+.liste .zeile:last-child{border-bottom:none}
+.liste b{display:block;font-family:'Spectral',serif;font-size:.88rem;color:var(--ink)}
+.liste span{font-family:'Inter',sans-serif;color:#5A645D;font-size:.78rem;line-height:1.4}
+
+.cta-bereich{position:sticky;bottom:0;background:linear-gradient(transparent,var(--papier) 30%);padding:1rem 0 max(1rem,env(safe-area-inset-bottom))}
+.cta{width:100%;border:1px solid var(--ink);background:var(--ink);color:#fff;font-family:'Inter',sans-serif;font-weight:700;font-size:.9rem;padding:.85rem;border-radius:8px;cursor:pointer;transition:transform .1s}
+.cta:active{transform:scale(.99)}
+.cta.ghost{background:var(--karte);border:1px solid var(--linie);color:var(--ink);margin-top:.5rem}
+button:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+
+/* ============ PDF-Export: clean, A4 ============ */
+#druckbericht{display:none}
+@media print{
+  @page{size:A4;margin:14mm 16mm}
+  body{display:block !important;background:#fff !important;font-family:'Inter',-apple-system,sans-serif;color:#0E0E0F;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .app{display:none !important}
+  #druckbericht{display:block !important;font-size:9.5pt;line-height:1.45}
+
+  .db-kopf{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7mm}
+  .db-kopf h1{font-size:12pt;font-weight:800;letter-spacing:-.01em}
+  .db-meta{font-size:7pt;color:#A9A9AE;font-weight:500}
+
+  .db-hero{border-radius:4mm;padding:7mm 7mm 6mm;margin-bottom:6mm;color:#fff}
+  .db-hero.gruen{background:#00B37E}.db-hero.gelb{background:#E8A317}.db-hero.rotf{background:#E5484D}.db-hero.neutral{background:#6E6E73}
+  .db-hero .dh-status{font-size:7pt;font-weight:800;letter-spacing:.16em;text-transform:uppercase;opacity:.85;margin-bottom:1.5mm}
+  .db-hero h2{font-size:17pt;font-weight:800;letter-spacing:-.02em;line-height:1.15;margin-bottom:2mm}
+  .db-hero p{font-size:8.5pt;line-height:1.45;opacity:.95;max-width:150mm}
+  .db-hero .dh-risiko{display:inline-block;margin-top:3mm;background:rgba(255,255,255,.18);border-radius:99px;padding:1mm 3.5mm;font-size:7.5pt;font-weight:700}
+
+  .db-label{font-size:7pt;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#A9A9AE;margin:0 0 2.5mm}
+  .db-antworten{margin-bottom:6mm}
+  .db-zeile{display:flex;justify-content:space-between;gap:6mm;padding:2.2mm 0;border-bottom:.4pt solid #ECECEE;break-inside:avoid}
+  .db-zeile .dz-q{color:#6E6E73;font-size:8.5pt}
+  .db-zeile .dz-a{font-weight:700;font-size:8.5pt;text-align:right;max-width:80mm}
+
+  .db-folgen{margin-bottom:6mm}
+  .db-folge{padding:1.8mm 0;border-bottom:.4pt solid #ECECEE;font-size:8pt;break-inside:avoid}
+  .db-folge b{font-weight:700}
+  .db-folge span{color:#6E6E73}
+
+  .db-fusz{margin-top:5mm;padding-top:3mm;border-top:.4pt solid #ECECEE;font-size:6.5pt;color:#A9A9AE;line-height:1.5}
+}
+
+/* ============ DESKTOP: Kanzlei-Ansicht (nur Bildschirm) ============ */
+@media screen and (min-width:900px){
+  .app{max-width:1180px;display:grid;grid-template-columns:320px 1fr;grid-template-rows:auto 1fr auto;column-gap:3rem;padding:3rem 2.5rem;min-height:100vh}
+
+  .seitenleiste{display:block;grid-row:1/4;border-right:1px solid var(--linie);padding-right:2.5rem}
+  .seitenleiste h2{font-family:'Spectral',serif;font-weight:700;font-size:1.45rem;line-height:1.25;color:var(--ink);margin-bottom:.8rem}
+  .seitenleiste .sl-text{font-size:.9rem;color:var(--grau1);line-height:1.6;margin-bottom:1.6rem}
+  
+  .sl-normen{border-top:1px solid var(--linie);padding-top:1.5rem;margin-top:1.5rem}
+  .sl-quelle{margin-bottom:1.1rem;border-left:2px solid var(--gold);padding-left:.8rem}
+  .sl-q-titel{font-family:'Inter',sans-serif;font-size:.82rem;font-weight:700;color:var(--ink);margin-bottom:.2rem;display:block}
+  .sl-q-desc{font-size:.82rem;color:var(--grau1);line-height:1.4;display:block}
+  
+  .sl-disclaimer{margin-top:2rem;font-family:'Inter',sans-serif;font-size:.7rem;color:var(--grau2);line-height:1.6}
+
+  .topbar{grid-column:2;position:static;background:transparent;padding:0 0 1.2rem}
+  .screens{grid-column:2}
+  .screen{padding:0 0 2rem}
+  h1{font-size:1.8rem}
+  .sub{font-size:.95rem;max-width:64ch}
+  .optionen{max-width:660px;gap:.6rem}
+  .opt{padding:1rem 1.15rem;border-radius:8px;font-size:1rem}
+  .opt .icon{display:none}
+  .opt .pfeil{display:none}
+  .info-row{max-width:660px}
+
+  .cta-bereich{position:static;background:none;display:flex;gap:.8rem}
+  .cta{width:auto;padding:.85rem 1.6rem;border-radius:6px;font-size:.9rem}
+  .cta.ghost{margin-top:0}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="seitenleiste">
+    <h2>Prüfung der verbotenen Einlagenrückgewähr</h2>
+    <p class="sl-text">Strukturierte Vollprüfung nach § 82 f GmbHG und §§ 52, 56 AktG.</p>
+    
+    <div class="sl-normen">
+      <div class="sl-quelle">
+        <span class="sl-q-titel">§ 82 Abs 1 GmbHG</span>
+        <span class="sl-q-desc">Verbot der Einlagenrückgewähr</span>
+      </div>
+      <div class="sl-quelle">
+        <span class="sl-q-titel">§ 83 GmbHG</span>
+        <span class="sl-q-desc">Rückersatz und Verjährung</span>
+      </div>
+      <div class="sl-quelle">
+        <span class="sl-q-titel">§§ 52, 56 AktG</span>
+        <span class="sl-q-desc">Verbot und Rückgewähr bei der AG</span>
+      </div>
+      <div class="sl-quelle">
+        <span class="sl-q-titel">§ 879 Abs 1 ABGB</span>
+        <span class="sl-q-desc">Nichtigkeitsfolge</span>
+      </div>
+      <div class="sl-quelle">
+        <span class="sl-q-titel">OGH 4 Ob 2078/96h</span>
+        <span class="sl-q-desc">Fremdvergleich</span>
+      </div>
+      <div class="sl-quelle">
+        <span class="sl-q-titel">OGH 6 Ob 14/14y</span>
+        <span class="sl-q-desc">Sicherheiten, Wirkung gegen die Bank</span>
+      </div>
+    </div>
+    
+    <div class="sl-disclaimer">
+      Alle bereitgestellten Informationen erfolgen ohne Gewähr für Richtigkeit, Vollständigkeit und Aktualität. Sie stellen keine Rechtsberatung dar. Bitte konsultieren Sie für eine individuelle rechtliche Beurteilung stets Ihren Rechtsberater.
+    </div>
+  </aside>
+
+  <div class="topbar">
+    <button class="zurueck" id="btn-zurueck" aria-label="Zurück" disabled>←</button>
+    <div class="progress"><i id="fortschritt"></i></div>
+    <div class="schritt-nr" id="schritt-nr"></div>
+  </div>
+
+  <div class="screens" id="screens"></div>
+
+</div>
+
+<div id="druckbericht" aria-hidden="true"></div>
+
+<script>
+/* ---------- Fragenkatalog ---------- */
+const FRAGEN = [
+ {
+  id:"F1", nr:1, tag:"Schritt 1 · Anwendungsbereich", titel:"Welche Rechtsform hat die Gesellschaft?",
+  sub:"Das Verbot der Einlagenrückgewähr gilt für Kapitalgesellschaften — und analog für kapitalistische Personengesellschaften.",
+  optionen:[
+   {w:"gmbh", icon:"🏢", label:"GmbH", small:"§ 82 Abs 1 GmbHG unmittelbar anwendbar"},
+   {w:"ag", icon:"📈", label:"AG", small:"§ 52 AktG unmittelbar anwendbar"},
+   {w:"gmbhcokg", icon:"🔗", label:"GmbH & Co KG", small:"Keine natürliche Person als Komplementär"},
+   {w:"andere", icon:"👤", label:"Andere Rechtsform", small:"OG, KG mit natürlicher Person, Einzelunternehmen"}
+  ],
+  quelle:"§ 82 Abs 1 GmbHG · § 52 AktG · OGH 29.05.2008, 2 Ob 225/07p (analoge Anwendung auf die GmbH & Co KG)."
+ },
+ {
+  id:"F2", nr:2, tag:"Schritt 2 · Empfänger", titel:"Wem kommt die Leistung zugute?",
+  sub:"Erfasst sind Gesellschafter — und Dritte, wenn die Leistung wirtschaftlich dem Gesellschafter zugutekommt.",
+  optionen:[
+   {w:"gesellschafter", icon:"🧑‍💼", label:"Gesellschafter / Aktionär", small:"Unmittelbarer Normadressat"},
+   {w:"ehemalig", icon:"🔄", label:"Ehem. oder künftiger Gesellschafter", small:"Insb. der Anteilserwerber"},
+   {w:"nahestehend", icon:"🕸️", label:"Nahestehender Dritter", small:"Konzernunternehmen, Angehörige, Treuhänder"},
+   {w:"dritter", icon:"🌐", label:"Echter, unabhängiger Dritter", small:"Kein Naheverhältnis zu einem Gesellschafter"}
+  ],
+  quelle:"§ 82 GmbHG · § 52 AktG · OGH 25.06.1996, 4 Ob 2078/96h · OGH 20.03.2014, 6 Ob 14/14y."
+ },
+ {
+  id:"F3", nr:3, tag:"Schritt 3 · Art der Leistung", titel:"Welche Art von Zuwendung liegt vor?",
+  sub:"Erfasst ist jede Vermögensverschiebung ohne gleichwertige Gegenleistung.",
+  optionen:[
+   {w:"sicherheit", icon:"🏦", label:"Bestellung von Sicherheiten", small:"Hypothek/Pfandrecht, Bürgschaft, Garantie"},
+   {w:"geld", icon:"📤", label:"Sonstige Zuwendung", small:"Zahlung, Darlehen, überhöhte Vergütung"},
+   {w:"nein", icon:"⛔", label:"Keine Vermögensverschiebung", small:"Ausgewogenes Geschäft ohne Zuwendungscharakter"}
+  ],
+  quelle:"§ 82 Abs 1 GmbHG · § 52 AktG · OGH 4 Ob 2078/96h · OGH 6 Ob 14/14y."
+ },
+ {
+  id:"S1", nr:4, tag:"Sicherheiten-Modul · Sicherungszweck", titel:"Wessen Verbindlichkeit wird besichert?",
+  sub:"Entscheidend ist, ob die Immobiliengesellschaft eigene oder fremde Schulden besichert.",
+  optionen:[
+   {w:"eigene", icon:"🏠", label:"Eigene Verbindlichkeit", small:"Z.B. eigener Projektfinanzierungskredit"},
+   {w:"gesellschafter", icon:"👤", label:"Verbindlichkeit des Gesellschafters", small:"Upstream-Sicherheit"},
+   {w:"erwerb", icon:"🔑", label:"Erwerbsfinanzierung", small:"Besicherung des Kaufpreiskredits"},
+   {w:"schwester", icon:"🔗", label:"Schuld einer Schwestergesellschaft", small:"Side-stream-Sicherheit im Konzern"}
+  ],
+  quelle:"OGH 6 Ob 14/14y · OGH 6 Ob 29/11z · § 66a AktG."
+ },
+ {
+  id:"S2", nr:5, tag:"Sicherheiten-Modul · Fremdüblichkeit", titel:"Ist die Sicherheit fremdüblich ausgestaltet?",
+  sub:"Marktgerechte Haftungsvergütung, werthaltiger Rückgriff, tragbares Verwertungsrisiko.",
+  optionen:[
+   {w:"ja", icon:"✅", label:"Ja — Avalprovision & werthaltiger Regress", small:"Marktgerechte Vergütung, Bonität geprüft"},
+   {w:"nein", icon:"⚠️", label:"Nein — unentgeltlich oder kein Regress", small:"Keine Vergütung, Regress wertlos"},
+   {w:"unklar", icon:"❓", label:"Unklar", small:"Bewertung von Provision & Bonität erforderlich"}
+  ],
+  quelle:"OGH 6 Ob 14/14y · OGH 4 Ob 2078/96h · OGH 6 Ob 271/05d."
+ },
+ {
+  id:"F4", nr:4, tag:"Schritt 4 · Ausnahmen", titel:"Liegt ein gesetzlicher Ausnahmefall vor?",
+  sub:"Bestimmte Vermögensübertragungen an Gesellschafter sind ausdrücklich zugelassen.",
+  optionen:[
+   {w:"gewinn", icon:"💶", label:"Bilanzgewinn-Ausschüttung", small:"Festgestellter Jahresabschluss"},
+   {w:"kapitalherabsetzung", icon:"📉", label:"Ordentliche Kapitalherabsetzung", small:"Mit Gläubigerschutzverfahren"},
+   {w:"liquidation", icon:"🏁", label:"Liquidationsüberschuss", small:"Nach Abwicklung und Sperrjahr"},
+   {w:"eigene", icon:"♻️", label:"Erwerb eigener Anteile", small:"In den gesetzlichen Fällen"},
+   {w:"keine", icon:"❌", label:"Kein Ausnahmefall", small:"Weiter zum Fremdvergleich"}
+  ],
+  quelle:"§§ 54 ff, 81, 82, 91 GmbHG · §§ 52, 65, 104, 175 ff, 212 AktG."
+ },
+ {
+  id:"F5", nr:5, tag:"Schritt 5 · Fremdvergleich", titel:"Hält das Geschäft dem Drittvergleich stand?",
+  sub:"Hätte die Gesellschaft dieses Geschäft auch mit einem Dritten geschlossen?",
+  optionen:[
+   {w:"ja", icon:"✅", label:"Ja, fremdüblich", small:"Marktübliche, ausgewogene Konditionen"},
+   {w:"nein", icon:"⚠️", label:"Nein, nicht fremdüblich", small:"Einem Dritten wären diese Konditionen nicht gewährt worden"},
+   {w:"unklar", icon:"❓", label:"Unklar", small:"Bewertung / Gutachten erforderlich"}
+  ],
+  quelle:"OGH 25.06.1996, 4 Ob 2078/96h · OGH 14.09.2011, 6 Ob 29/11z."
+ },
+ {
+  id:"F6", nr:6, tag:"Letzter Schritt · Rechtfertigung", titel:"Besteht eine betriebliche Rechtfertigung?",
+  sub:"Ein konkretes, nachweisbares Eigeninteresse der Gesellschaft kann den Nachteil aufwiegen.",
+  optionen:[
+   {w:"ja", icon:"🎯", label:"Ja, konkretes Eigeninteresse", small:"Nachweisbar, dokumentiert, wiegt den Nachteil auf"},
+   {w:"nein", icon:"🚫", label:"Nein", small:"Kein oder kein dokumentierbares Eigeninteresse"}
+  ],
+  quelle:"OGH 4 Ob 2078/96h · OGH 6 Ob 14/14y."
+ }
+];
+
+/* Emojis wurden aus den Listen komplett entfernt */
+const FOLGEN_ALLGEMEIN = [
+ {b:"Nichtigkeit", s:"Das Geschäft ist nach stRsp gem. § 879 Abs 1 ABGB nichtig."},
+ {b:"Rückersatz", s:"Rückerstattung der empfangenen Leistung (§ 83 Abs 1 GmbHG · § 56 AktG)."},
+ {b:"Verjährung", s:"Der Rückersatzanspruch verjährt in fünf Jahren."},
+ {b:"Organhaftung", s:"Geschäftsführer/Vorstand haften der Gesellschaft (§ 25 GmbHG · § 84 AktG)."},
+ {b:"Wirkung gegen Dritte", s:"Nichtigkeit schlägt auf Dritte durch, wenn der Verstoß bekannt war."}
+];
+
+const FOLGEN_SICHERHEIT = [
+ {b:"Nichtigkeit der Sicherheit", s:"Pfandbestellungsvertrag bzw. Haftungsübernahme sind nichtig."},
+ {b:"Wirkung gegenüber Bank", s:"Die Nichtigkeit wirkt gegen die Bank, wenn sie den Verstoß kennen musste."},
+ {b:"Grundbuch", s:"Pfandrecht kann mit Löschungsklage (§ 61 GBG) bekämpft werden."},
+ {b:"Rückabwicklung / Freigabe", s:"Freigabe der Sicherheit kann verlangt werden."},
+ {b:"Organhaftung", s:"Geschäftsführer haften der Gesellschaft."},
+ {b:"Verjährung", s:"Rückersatzansprüche verjähren in fünf Jahren."}
+];
+
+const QUELLEN_ALLE = [
+ "§§ 82, 83 GmbHG — Verbot der Einlagenrückgewähr, Rückersatz, Verjährung",
+ "§ 25 Abs 3 Z 1 GmbHG — Geschäftsführerhaftung",
+ "§§ 52, 56, 84 AktG — Verbot, Rückgewähr, Vorstandshaftung",
+ "§ 879 Abs 1 ABGB — Nichtigkeit gesetzwidriger Geschäfte",
+ "OGH 4 Ob 2078/96h — Fremdvergleich, betriebliche Rechtfertigung",
+ "OGH 6 Ob 14/14y — Sicherheiten für Gesellschafterschulden"
+];
+
+/* ---------- Auswertung ---------- */
+const antworten = {};
+
+function auswerten(){
+  const a = antworten;
+  if(a.F1==="andere") return {typ:"neutral", risiko:"Nicht anwendbar",
+    titel:"Kapitalerhaltungsrecht greift nicht",
+    text:"Auf diese Rechtsform sind §§ 82 f GmbHG / §§ 52, 56 AktG grundsätzlich nicht anwendbar. Beachte allgemeine Instrumente (Anfechtung, EKEG).", folgen:null};
+  if(a.F2==="dritter") return {typ:"gruen", risiko:"Niedrig",
+    titel:"Kein Anwendungsfall",
+    text:"Leistung an einen echten Dritten ohne Naheverhältnis. Das Verbot greift nicht.", folgen:null};
+  if(a.F3==="nein") return {typ:"gruen", risiko:"Niedrig",
+    titel:"Kein Tatbestand erfüllt",
+    text:"Ohne Vermögensverschiebung fehlt es am objektiven Tatbestand der Einlagenrückgewähr.", folgen:null};
+
+  if(a.S1==="eigene") return {typ:"gruen", risiko:"Niedrig",
+    titel:"Besicherung eigener Verbindlichkeiten",
+    text:"Die Belastung für eigene Kredite der Gesellschaft ist keine Einlagenrückgewähr.", folgen:null};
+  if(a.S2==="ja") return {typ:"gruen", risiko:"Niedrig (Dokumentation)",
+    titel:"Fremdüblich ausgestaltete Sicherheit",
+    text:"Die Sicherheitenbestellung hält dem Drittvergleich stand. Zwingend zeitnah dokumentieren (Provision, Bonität).", folgen:null};
+  if(a.S2==="unklar") return {typ:"gelb", risiko:"Erhöht",
+    titel:"Fremdüblichkeit ungeklärt",
+    text:"Ohne belastbare Bemessung von Provision und Verwertungsrisiko besteht erhebliches Risiko. Bewertung einholen.", folgen:"sicherheit"};
+  if(a.S2==="nein" && a.F6==null) return null;
+
+  if(a.F4 && a.F4!=="keine") return {typ:"gruen", risiko:"Niedrig (Verfahren)",
+    titel:"Gesetzlich zugelassene Übertragung",
+    text:"Ein Ausnahmetatbestand liegt vor. Zulässigkeit setzt strikte Verfahrenseinhaltung voraus.", folgen:null};
+  if(a.F5==="ja") return {typ:"gruen", risiko:"Niedrig (Dokumentation)",
+    titel:"Fremdübliches Geschäft",
+    text:"Das Geschäft hält dem Drittvergleich stand. Dokumentiere die Marktüblichkeit für den Streitfall.", folgen:null};
+  if(a.F5==="unklar") return {typ:"gelb", risiko:"Erhöht",
+    titel:"Fremdüblichkeit ungeklärt",
+    text:"Ohne belastbaren Nachweis besteht erhebliches Risiko. Vor Durchführung Dokumentation sichern.", folgen:"allgemein"};
+
+  if(a.F6==="ja"){
+    const istSicherheit = antworten.F3==="sicherheit";
+    return {typ:"gelb", risiko:"Grenzfall (Erhöht)",
+      titel:"Nur betriebliche Rechtfertigung trägt",
+      text:"Das Geschäft ist nicht fremdüblich, könnte aber durch ein konkretes, gleichwertiges Eigeninteresse gedeckt sein. Der OGH legt hierbei extrem strenge Maßstäbe an.",
+      folgen: istSicherheit ? "sicherheit" : "allgemein"};
+  }
+  if(a.F6==="nein"){
+    const istSicherheit = antworten.F3==="sicherheit";
+    return {typ:"rotf", risiko:"Hoch (Verstoß)",
+      titel:"Verbotene Einlagenrückgewähr",
+      text:"Vermögenszuwendung (bzw. Belastung) zugunsten eines Gesellschafters ohne fremdübliche Gegenleistung und ohne betriebliche Rechtfertigung. Verstoß gegen § 82 GmbHG / § 52 AktG.",
+      folgen: istSicherheit ? "sicherheit" : "allgemein"};
+  }
+  return null;
+}
+
+/* Routing */
+function naechsteFrageId(frageId, wert){
+  switch(frageId){
+    case "F1": return wert==="andere" ? null : "F2";
+    case "F2": return wert==="dritter" ? null : "F3";
+    case "F3": if(wert==="nein") return null; return wert==="sicherheit" ? "S1" : "F4";
+    case "S1": return wert==="eigene" ? null : "S2";
+    case "S2": return wert==="nein" ? "F6" : null;
+    case "F4": return wert==="keine" ? "F5" : null;
+    case "F5": return wert==="nein" ? "F6" : null;
+    case "F6": return null;
+  }
+}
+const GESAMT = 6;
+
+/* ---------- Rendering ---------- */
+const wrap = document.getElementById("screens");
+const screens = {};
+
+FRAGEN.forEach(f=>{
+  const s = document.createElement("div");
+  s.className = "screen"; s.dataset.fid = f.id;
+  s.innerHTML = `
+    <span class="tag">${f.tag}</span>
+    <h1>${f.titel}</h1>
+    <p class="sub">${f.sub}</p>
+    <div class="optionen">
+      ${f.optionen.map(o=>`
+        <button class="opt" data-wert="${o.w}">
+          <span class="icon">${o.icon}</span>
+          <div>
+            <span>${o.label}</span>
+            ${o.small?`<small>${o.small}</small>`:""}
+          </div>
+          <span class="pfeil">›</span>
+        </button>`).join("")}
+    </div>
+    <div class="info-row">
+      <details><summary>Rechtsquellen</summary>
+        <div class="inhalt"><p>${f.quelle}</p></div>
+      </details>
+    </div>`;
+  s.querySelectorAll(".opt").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      s.querySelectorAll(".opt").forEach(o=>o.classList.remove("gewaehlt"));
+      btn.classList.add("gewaehlt");
+      antworten[f.id] = btn.dataset.wert;
+      const reihenfolge = ["F1","F2","F3","S1","S2","F4","F5","F6"];
+      reihenfolge.slice(reihenfolge.indexOf(f.id)+1).forEach(k=>delete antworten[k]);
+      setTimeout(()=> weiter(f.id, btn.dataset.wert), 200);
+    });
+  });
+  wrap.appendChild(s);
+  screens[f.id] = s;
+});
+
+let letztesErgebnis = null;
+
+function baueErgebnis(erg){
+  letztesErgebnis = erg;
+  const alt = document.getElementById("screen-ergebnis"); if(alt) alt.remove();
+  const folgenListe = erg.folgen==="sicherheit" ? FOLGEN_SICHERHEIT : erg.folgen==="allgemein" ? FOLGEN_ALLGEMEIN : null;
+  const s = document.createElement("div");
+  s.className = "screen"; s.id = "screen-ergebnis"; s.dataset.fid = "E";
+  
+  s.innerHTML = `
+    <div class="erg-header ${erg.typ}">
+      <h1>${erg.titel}</h1>
+      <div class="badge">Risiko: ${erg.risiko}</div>
+    </div>
+    
+    <div class="erg-text">
+      ${erg.text}
+    </div>
+    
+    ${folgenListe ? `
+      <div class="tag" style="margin-top:.5rem">${erg.folgen==="sicherheit"?"Rechtsfolgen bei Nichtigheit":"Rechtsfolgen"}</div>
+      <div class="liste">
+        ${folgenListe.map(x=>`<div class="zeile"><div><b>${x.b}</b><span>${x.s}</span></div></div>`).join("")}
+      </div>`:""}
+      
+    <div class="info-row">
+      <details><summary>Quellenverzeichnis</summary>
+        <div class="inhalt">${QUELLEN_ALLE.map(q=>`<p>${q}</p>`).join("")}</div>
+      </details>
+    </div>
+    <div class="cta-bereich">
+      <button class="cta" onclick="druckExport()">Ergebnis drucken / PDF</button>
+      <button class="cta ghost" id="btn-neu">Neue Prüfung</button>
+    </div>`;
+  wrap.appendChild(s);
+  s.querySelector("#btn-neu").addEventListener("click", reset);
+  return s;
+}
+
+/* ---------- Navigation ---------- */
+let pfad = ["F1"];
+let aktiverScreen = screens.F1;
+aktiverScreen.classList.add("aktiv");
+updateTop();
+
+function zeige(el){
+  if(aktiverScreen===el) return;
+  const alt = aktiverScreen;
+  alt.classList.remove("aktiv"); alt.classList.add("raus");
+  setTimeout(()=>alt.classList.remove("raus"), 320);
+  el.classList.add("aktiv"); el.scrollTop = 0;
+  aktiverScreen = el;
+  updateTop();
+}
+
+function weiter(frageId, wert){
+  const naechste = naechsteFrageId(frageId, wert);
+  if(naechste===null){
+    const erg = auswerten();
+    if(erg){ pfad.push("E"); zeige(baueErgebnis(erg)); return; }
+  }
+  if(naechste){ pfad.push(naechste); zeige(screens[naechste]); }
+}
+
+document.getElementById("btn-zurueck").addEventListener("click",()=>{
+  if(pfad.length<=1) return;
+  pfad.pop();
+  const ziel = pfad[pfad.length-1];
+  if(ziel!=="E"){
+    const reihenfolge = ["F1","F2","F3","S1","S2","F4","F5","F6"];
+    reihenfolge.slice(reihenfolge.indexOf(ziel)).forEach(k=>delete antworten[k]);
+    screens[ziel].querySelectorAll(".opt").forEach(o=>o.classList.remove("gewaehlt"));
+  }
+  zeige(ziel==="E" ? document.getElementById("screen-ergebnis") : screens[ziel]);
+});
+
+function updateTop(){
+  const istErgebnis = aktiverScreen.dataset.fid==="E";
+  const frage = FRAGEN.find(f=>f.id===aktiverScreen.dataset.fid);
+  const nr = istErgebnis ? GESAMT : (frage ? frage.nr : 1);
+  document.getElementById("fortschritt").style.width = (istErgebnis?100:((nr-1)/GESAMT*100+8))+"%";
+  document.getElementById("schritt-nr").textContent = istErgebnis ? "✓" : nr+"/"+GESAMT;
+  document.getElementById("btn-zurueck").disabled = pfad.length<=1;
+}
+
+/* ---------- PDF-Export ---------- */
+function baueDruckbericht(){
+  const db = document.getElementById("druckbericht");
+  const erg = letztesErgebnis;
+  const datum = new Date().toLocaleDateString("de-AT",{day:"2-digit",month:"2-digit",year:"numeric"});
+
+  const zeilen = pfad.filter(id=>id!=="E").map(id=>{
+    const f = FRAGEN.find(x=>x.id===id);
+    const wert = antworten[id];
+    if(!f || !wert) return "";
+    const opt = f.optionen.find(o=>o.w===wert);
+    return `<div class="db-zeile"><span class="dz-q">${f.titel}</span><span class="dz-a">${opt.label}</span></div>`;
+  }).join("");
+
+  const statusText = erg ? {gruen:"Zulässig", gelb:"Erhöhtes Risiko", rotf:"Verstoß", neutral:"Nicht anwendbar"}[erg.typ] : "Offen";
+  const folgenListe = erg && erg.folgen==="sicherheit" ? FOLGEN_SICHERHEIT : erg && erg.folgen==="allgemein" ? FOLGEN_ALLGEMEIN : null;
+
+  db.innerHTML = `
+    <div class="db-kopf">
+      <h1>Prüfbericht</h1>
+      <span class="db-meta">${datum} · § 82 f GmbHG · §§ 52, 56 AktG</span>
+    </div>
+
+    ${erg ? `<div class="db-hero ${erg.typ}">
+      <div class="dh-status">${statusText}</div>
+      <h2>${erg.titel}</h2>
+      <p>${erg.text}</p>
+      <span class="dh-risiko">Rechtsrisiko: ${erg.risiko}</span>
+    </div>` : `<div class="db-hero neutral">
+      <div class="dh-status">Offen</div>
+      <h2>Prüfung nicht abgeschlossen</h2>
+      <p>Der Bericht dokumentiert den bisherigen Zwischenstand.</p>
+    </div>`}
+
+    <div class="db-antworten">
+      <div class="db-label">Deine Angaben</div>
+      ${zeilen}
+    </div>
+
+    ${folgenListe ? `<div class="db-folgen">
+      <div class="db-label">Rechtsfolgen</div>
+      ${folgenListe.map(x=>`<div class="db-folge"><b>${x.b}</b> · <span>${x.s}</span></div>`).join("")}
+    </div>`:""}
+
+    <div class="db-fusz">Strukturierte Prüfung · Keine Rechtsberatung.</div>`;
+}
+
+function druckExport(){
+  baueDruckbericht();
+  window.print();
+}
+window.addEventListener("beforeprint", baueDruckbericht);
+
+function reset(){
+  letztesErgebnis = null;
+  document.getElementById("druckbericht").innerHTML = "";
+  Object.keys(antworten).forEach(k=>delete antworten[k]);
+  Object.values(screens).forEach(s=>s.querySelectorAll(".opt").forEach(o=>o.classList.remove("gewaehlt")));
+  const e = document.getElementById("screen-ergebnis"); if(e) e.remove();
+  pfad = ["F1"];
+  zeige(screens.F1);
+}
+</script>
+</body>
+</html>
