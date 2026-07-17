@@ -49,6 +49,12 @@ h1{font-family:'Spectral',serif;font-size:1.35rem;font-weight:700;line-height:1.
 .opt .pfeil{margin-left:auto;color:var(--grau2);flex-shrink:0;font-family:'Inter',sans-serif}
 
 .info-row{margin-top:auto;padding-top:.8rem}
+
+/* Rechtsquellen je Schritt (mobil eingeklappt, Desktop rechts fixiert) */
+.frage-body{display:flex;flex-direction:column;gap:1rem}
+.quellen-panel{display:none}
+.quellen-panel .qp-titel{font-family:'Inter',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5A645D;margin-bottom:.6rem}
+.quellen-panel .qp-inhalt{font-family:'Inter',sans-serif;font-size:.8rem;color:var(--grau1);line-height:1.55;border-left:2px solid var(--gold);padding-left:.9rem}
 details{border-top:1px solid var(--linie)}
 details summary{list-style:none;display:flex;align-items:center;justify-content:space-between;padding:.7rem 0;cursor:pointer;font-family:'Inter',sans-serif;font-size:.8rem;font-weight:600;color:#5A645D}
 details summary::-webkit-details-marker{display:none}
@@ -134,6 +140,12 @@ button:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
   .opt .icon{display:none}
   .opt .pfeil{display:none}
   .info-row{max-width:660px}
+
+  /* Rechtsquellen rechts neben den Antwortmöglichkeiten, immer sichtbar */
+  .frage-body{flex-direction:row;align-items:flex-start;gap:2.5rem;max-width:960px}
+  .frage-body .optionen{flex:1 1 auto}
+  .quellen-panel{display:block;width:260px;flex-shrink:0;padding-top:.2rem}
+  .quellen-mobile{display:none}
 
   .cta-bereich{position:static;background:none;display:flex;gap:.8rem}
   .cta{width:auto;padding:.85rem 1.6rem;border-radius:6px;font-size:.9rem}
@@ -222,7 +234,7 @@ const FRAGEN = [
   sub:"Erfasst ist jede Vermögensverschiebung ohne gleichwertige Gegenleistung.",
   optionen:[
    {w:"sicherheit", icon:"🏦", label:"Bestellung von Sicherheiten", small:"Hypothek/Pfandrecht, Bürgschaft, Garantie"},
-   {w:"geld", icon:"📤", label:"Sonstige Zuwendung", small:"Zahlung, Darlehen, überhöhte Vergütung"},
+   {w:"geld", icon:"📤", label:"Sonstige Zuwendung", small:"Zahlung, Darlehen, überhöhte Vergütung, Nutzungsüberlassung, Prekarium, Forderungsverzicht, verdeckte Gewinnausschüttung"},
    {w:"nein", icon:"⛔", label:"Keine Vermögensverschiebung", small:"Ausgewogenes Geschäft ohne Zuwendungscharakter"}
   ],
   quelle:"§ 82 Abs 1 GmbHG · § 52 AktG · OGH 4 Ob 2078/96h · OGH 6 Ob 14/14y."
@@ -387,18 +399,24 @@ FRAGEN.forEach(f=>{
     <span class="tag">${f.tag}</span>
     <h1>${f.titel}</h1>
     <p class="sub">${f.sub}</p>
-    <div class="optionen">
-      ${f.optionen.map(o=>`
-        <button class="opt" data-wert="${o.w}">
-          <span class="icon">${o.icon}</span>
-          <div>
-            <span>${o.label}</span>
-            ${o.small?`<small>${o.small}</small>`:""}
-          </div>
-          <span class="pfeil">›</span>
-        </button>`).join("")}
+    <div class="frage-body">
+      <div class="optionen">
+        ${f.optionen.map(o=>`
+          <button class="opt" data-wert="${o.w}">
+            <span class="icon">${o.icon}</span>
+            <div>
+              <span>${o.label}</span>
+              ${o.small?`<small>${o.small}</small>`:""}
+            </div>
+            <span class="pfeil">›</span>
+          </button>`).join("")}
+      </div>
+      <aside class="quellen-panel">
+        <div class="qp-titel">Rechtsquellen</div>
+        <div class="qp-inhalt"><p>${f.quelle}</p></div>
+      </aside>
     </div>
-    <div class="info-row">
+    <div class="info-row quellen-mobile">
       <details><summary>Rechtsquellen</summary>
         <div class="inhalt"><p>${f.quelle}</p></div>
       </details>
